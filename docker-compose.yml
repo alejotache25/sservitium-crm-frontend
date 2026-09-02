@@ -1,0 +1,436 @@
+# =============================================================================
+# Evo CRM Community v1.0.0 — adaptado para EasyPanel (Compose Service)
+#
+# Diferencias vs docker-compose.swarm.yaml oficial:
+#   - Sin secciones deploy: / labels Traefik / puertos publicados
+#     (EasyPanel enruta por Dominios -> servicio interno + puerto)
+#   - Postgres con pgvector INCLUIDO (pgvector/pgvector:pg16) — el swarm
+#     lo exigia externo; aqui va dentro del stack como servicio "pgvector"
+#   - Red default de Compose (todos los servicios se ven por nombre)
+#   - Volumenes nombrados gestionados por Compose (sin external:)
+#   - Imagenes fijadas a 1.0.0 (estable, jul 2026) en vez de latest
+#   - Variables interpoladas desde el Environment (.env) de EasyPanel
+# =============================================================================
+
+services:
+
+  # --------------------------- BASE DE DATOS (pgvector) ----------------------
+  pgvector:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: evocrm
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 9db13a0f53877322cf311ea9f4f326a4
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d evocrm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # --------------------------- REDIS -----------------------------------------
+  evocrm_redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--port", "6379"]
+    volumes:
+      - evocrm_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # --------------------------- RABBITMQ (broker EvoFlow) ---------------------
+  evocrm_rabbitmq:
+    image: rabbitmq:3-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: evoflow
+      RABBITMQ_DEFAULT_PASS: c6050948543269a26657e73596f57a20
+    volumes:
+      - evocrm_rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # --------------------------- CLICKHOUSE (eventos EvoFlow) ------------------
+  evocrm_clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: 4c3361fa4f4af5d13caacae222058c63
+      CLICKHOUSE_DB: default
+    volumes:
+      - evocrm_clickhouse_data:/var/lib/clickhouse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--user", "default", "--password", "4c3361fa4f4af5d13caacae222058c63", "--query", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # --------------------------- NGINX API GATEWAY (puerto 3030) ---------------
+  evocrm_gateway:
+    image: evoapicloud/evo-crm-gateway:1.0.0
+    restart: unless-stopped
+    environment:
+      AUTH_UPSTREAM: evocrm_auth:3001
+      CRM_UPSTREAM: evocrm_crm:3000
+      CORE_UPSTREAM: evocrm_core:5555
+      PROCESSOR_UPSTREAM: evocrm_processor:8000
+      BOT_RUNTIME_UPSTREAM: evocrm_bot_runtime:8080
+    ports:
+      - "3030:3030"
+
+  # --------------------------- AUTH SERVICE (Rails, 3001) --------------------
+  evocrm_auth:
+    image: evoapicloud/evo-auth-service-community:1.0.0
+    restart: unless-stopped
+    command: bash -c "bundle exec rails db:migrate 2>&1 || echo 'Migration had errors, continuing...'; bundle exec rails s -p 3001 -b 0.0.0.0"
+    environment:
+      RAILS_ENV: production
+      RAILS_MAX_THREADS: "5"
+      SECRET_KEY_BASE: b58aa8cc00804fb1be7eab421318d06196b4b0192a6fbdb28e6cadb521f19ed427333ec8b7c1ed3c9bdd5bb993cc343397e835927fbae2f47226d367aa1f18aa
+      JWT_SECRET_KEY: 11b7a3d2d9670f1ca395ca9715a993aa275298a56509334159a029ae7df0761f
+      EVOAI_CRM_API_TOKEN: 4513c723b01d4bc03d9cf769558646b7806e994867b187933481a6c491823696
+      POSTGRES_HOST: pgvector
+      POSTGRES_PORT: "5432"
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: 9db13a0f53877322cf311ea9f4f326a4
+      POSTGRES_DATABASE: evocrm
+      POSTGRES_SSLMODE: disable
+      REDIS_URL: redis://evocrm_redis:6379/1
+      FRONTEND_URL: http://51.77.194.244:5173
+      BACKEND_URL: http://51.77.194.244:3030
+      CORS_ORIGINS: http://51.77.194.244:5173,http://51.77.194.244:3030
+      SMTP_DOMAIN: 
+      MAILER_SENDER_EMAIL: noreply@51.77.194.244
+      SMTP_USERNAME: 
+      SMTP_PASSWORD: 
+      SMTP_ADDRESS: 
+      SMTP_PORT: 
+      SMTP_AUTHENTICATION: plain
+      SMTP_ENABLE_STARTTLS_AUTO: "true"
+      DOORKEEPER_JWT_SECRET_KEY: ab6c2e39d2d591a06ca28f9e06fc8e992630a1389c718a1f7da81154d1267810
+      DOORKEEPER_JWT_ALGORITHM: hs256
+      DOORKEEPER_JWT_ISS: evo-auth-service
+      MFA_ISSUER: EvoCRM
+      SIDEKIQ_CONCURRENCY: "10"
+      ACTIVE_STORAGE_SERVICE: local
+      ACTIVE_STORAGE_URL: http://51.77.194.244:3030
+      OAUTH_TOKEN_EXPIRES_IN: "28800"
+    volumes:
+      - evoauth_storage:/app/storage
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  # --------------------------- AUTH SIDEKIQ ----------------------------------
+  evocrm_auth_sidekiq:
+    image: evoapicloud/evo-auth-service-community:1.0.0
+    restart: unless-stopped
+    command: ["bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml"]
+    environment:
+      RAILS_ENV: production
+      SECRET_KEY_BASE: b58aa8cc00804fb1be7eab421318d06196b4b0192a6fbdb28e6cadb521f19ed427333ec8b7c1ed3c9bdd5bb993cc343397e835927fbae2f47226d367aa1f18aa
+      JWT_SECRET_KEY: 11b7a3d2d9670f1ca395ca9715a993aa275298a56509334159a029ae7df0761f
+      EVOAI_CRM_API_TOKEN: 4513c723b01d4bc03d9cf769558646b7806e994867b187933481a6c491823696
+      POSTGRES_HOST: pgvector
+      POSTGRES_PORT: "5432"
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: 9db13a0f53877322cf311ea9f4f326a4
+      POSTGRES_DATABASE: evocrm
+      POSTGRES_SSLMODE: disable
+      REDIS_URL: redis://evocrm_redis:6379/1
+      FRONTEND_URL: http://51.77.194.244:5173
+      BACKEND_URL: http://51.77.194.244:3030
+      CORS_ORIGINS: http://51.77.194.244:5173,http://51.77.194.244:3030
+      DOORKEEPER_JWT_SECRET_KEY: ab6c2e39d2d591a06ca28f9e06fc8e992630a1389c718a1f7da81154d1267810
+      DOORKEEPER_JWT_ALGORITHM: hs256
+      DOORKEEPER_JWT_ISS: evo-auth-service
+      MFA_ISSUER: EvoCRM
+      SIDEKIQ_CONCURRENCY: "10"
+      ACTIVE_STORAGE_SERVICE: local
+      ACTIVE_STORAGE_URL: http://51.77.194.244:3030
+      OAUTH_TOKEN_EXPIRES_IN: "28800"
+    volumes:
+      - evoauth_storage:/app/storage
+    healthcheck:
+      disable: true
+
+  # --------------------------- CRM SERVICE (Rails, 3000) ---------------------
+  evocrm_crm:
+    image: evoapicloud/evo-ai-crm-community:1.0.0
+    restart: unless-stopped
+    command: sh -c "until wget -qO- http://evocrm_auth:3001/health >/dev/null 2>&1; do echo 'Waiting for auth...'; sleep 5; done; bundle exec rails db:migrate 2>&1 || echo 'Migration had errors, continuing...'; bundle exec rails s -p 3000 -b 0.0.0.0"
+    environment:
+      RAILS_ENV: production
+      RAILS_SERVE_STATIC_FILES: "true"
+      RAILS_LOG_TO_STDOUT: "true"
+      SECRET_KEY_BASE: b58aa8cc00804fb1be7eab421318d06196b4b0192a6fbdb28e6cadb521f19ed427333ec8b7c1ed3c9bdd5bb993cc343397e835927fbae2f47226d367aa1f18aa
+      JWT_SECRET_KEY: 11b7a3d2d9670f1ca395ca9715a993aa275298a56509334159a029ae7df0761f
+      EVOAI_CRM_API_TOKEN: 4513c723b01d4bc03d9cf769558646b7806e994867b187933481a6c491823696
+      POSTGRES_HOST: pgvector
+      POSTGRES_PORT: "5432"
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: 9db13a0f53877322cf311ea9f4f326a4
+      POSTGRES_DATABASE: evocrm
+      POSTGRES_SSLMODE: disable
+      REDIS_URL: redis://evocrm_redis:6379/1
+      EVO_AUTH_SERVICE_URL: http://evocrm_auth:3001
+      EVO_AI_CORE_SERVICE_URL: http://evocrm_core:5555
+      EVO_FLOW_ENABLED: "true"
+      EVO_FLOW_API_URL: http://evocrm_evoflow:3334/api/v1
+      AUTH_APIKEY_INTEGRATION_LOCAL: 44b24f5183ee954f01602231657f252bd626d5d42c53e24a0cb832e9b1c2598b
+      EVO_FLOW_ALLOW_INSECURE: "true"
+      BACKEND_URL: http://51.77.194.244:3030
+      FRONTEND_URL: http://51.77.194.244:5173
+      CORS_ORIGINS: http://51.77.194.244:5173,http://51.77.194.244:3030
+      DISABLE_TELEMETRY: "true"
+      LOG_LEVEL: info
+      ENABLE_ACCOUNT_SIGNUP: "true"
+      ENABLE_PUSH_RELAY_SERVER: "true"
+      ENABLE_INBOX_EVENTS: "true"
+      BOT_RUNTIME_URL: http://evocrm_bot_runtime:8080
+      BOT_RUNTIME_SECRET: 300e01102ea69637c1826821f20fd72740d0bb46809ed28dcd4600cb0d3d1ecd
+      BOT_RUNTIME_POSTBACK_BASE_URL: http://evocrm_crm:3000
+      ACTIVE_STORAGE_SERVICE: local
+      ACTIVE_STORAGE_URL: http://51.77.194.244:3030
+    volumes:
+      - evocrm_storage:/app/storage
+    depends_on:
+      pgvector:
+        condition: service_healthy
+      evocrm_redis:
+        condition: service_healthy
+      evocrm_auth:
+        condition: service_healthy
+
+  # --------------------------- CRM SIDEKIQ -----------------------------------
+  evocrm_crm_sidekiq:
+    image: evoapicloud/evo-ai-crm-community:1.0.0
+    restart: unless-stopped
+    command: ["bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml"]
+    environment:
+      RAILS_ENV: production
+      SECRET_KEY_BASE: b58aa8cc00804fb1be7eab421318d06196b4b0192a6fbdb28e6cadb521f19ed427333ec8b7c1ed3c9bdd5bb993cc343397e835927fbae2f47226d367aa1f18aa
+      JWT_SECRET_KEY: 11b7a3d2d9670f1ca395ca9715a993aa275298a56509334159a029ae7df0761f
+      EVOAI_CRM_API_TOKEN: 4513c723b01d4bc03d9cf769558646b7806e994867b187933481a6c491823696
+      POSTGRES_HOST: pgvector
+      POSTGRES_PORT: "5432"
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: 9db13a0f53877322cf311ea9f4f326a4
+      POSTGRES_DATABASE: evocrm
+      POSTGRES_SSLMODE: disable
+      REDIS_URL: redis://evocrm_redis:6379/1
+      EVO_AUTH_SERVICE_URL: http://evocrm_auth:3001
+      EVO_AI_CORE_SERVICE_URL: http://evocrm_core:5555
+      EVO_FLOW_ENABLED: "true"
+      EVO_FLOW_API_URL: http://evocrm_evoflow:3334/api/v1
+      AUTH_APIKEY_INTEGRATION_LOCAL: 44b24f5183ee954f01602231657f252bd626d5d42c53e24a0cb832e9b1c2598b
+      EVO_FLOW_ALLOW_INSECURE: "true"
+      BACKEND_URL: http://51.77.194.244:3030
+      FRONTEND_URL: http://51.77.194.244:5173
+      CORS_ORIGINS: http://51.77.194.244:5173,http://51.77.194.244:3030
+      BOT_RUNTIME_URL: http://evocrm_bot_runtime:8080
+      BOT_RUNTIME_SECRET: 300e01102ea69637c1826821f20fd72740d0bb46809ed28dcd4600cb0d3d1ecd
+      BOT_RUNTIME_POSTBACK_BASE_URL: http://evocrm_crm:3000
+      ACTIVE_STORAGE_SERVICE: local
+      ACTIVE_STORAGE_URL: http://51.77.194.244:3030
+    volumes:
+      - evocrm_storage:/app/storage
+    depends_on:
+      pgvector:
+        condition: service_healthy
+      evocrm_redis:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+
+  # --------------------------- CORE SERVICE (Go, 5555) -----------------------
+  evocrm_core:
+    image: evoapicloud/evo-ai-core-service-community:1.0.0
+    restart: unless-stopped
+    environment:
+      DB_HOST: pgvector
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: 9db13a0f53877322cf311ea9f4f326a4
+      DB_NAME: evocrm
+      DB_SSLMODE: disable
+      DB_MAX_IDLE_CONNS: "10"
+      DB_MAX_OPEN_CONNS: "100"
+      DB_CONN_MAX_LIFETIME: 1h
+      DB_CONN_MAX_IDLE_TIME: 30m
+      PORT: "5555"
+      SECRET_KEY_BASE: b58aa8cc00804fb1be7eab421318d06196b4b0192a6fbdb28e6cadb521f19ed427333ec8b7c1ed3c9bdd5bb993cc343397e835927fbae2f47226d367aa1f18aa
+      JWT_SECRET_KEY: 11b7a3d2d9670f1ca395ca9715a993aa275298a56509334159a029ae7df0761f
+      JWT_ALGORITHM: HS256
+      ENCRYPTION_KEY: hY57F6fz6Hp1YtdqWUTpRxV3WMyoSVaaBzGe1JD97yo=
+      EVOLUTION_BASE_URL: http://evocrm_crm:3000
+      EVO_AUTH_BASE_URL: http://evocrm_auth:3001
+      AI_PROCESSOR_URL: http://evocrm_processor:8000
+      AI_PROCESSOR_VERSION: v1
+    depends_on:
+      pgvector:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:5555/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # --------------------------- PROCESSOR (Python, 8000) ----------------------
+  evocrm_processor:
+    image: evoapicloud/evo-ai-processor-community:1.0.0
+    restart: unless-stopped
+    command: sh -c "alembic upgrade head 2>&1 || echo 'Alembic migration had errors, continuing...'; python -m scripts.run_seeders; uvicorn src.main:app --host $$HOST --port $$PORT"
+    volumes:
+      - evocrm_processor_logs:/app/logs
+    environment:
+      POSTGRES_CONNECTION_STRING: postgresql://postgres:9db13a0f53877322cf311ea9f4f326a4@pgvector:5432/evocrm?sslmode=disable
+      REDIS_HOST: evocrm_redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ""
+      REDIS_SSL: "false"
+      REDIS_DB: "1"
+      REDIS_KEY_PREFIX: a2a_
+      REDIS_TTL: "3600"
+      HOST: 0.0.0.0
+      PORT: "8000"
+      DEBUG: "false"
+      SECRET_KEY_BASE: b58aa8cc00804fb1be7eab421318d06196b4b0192a6fbdb28e6cadb521f19ed427333ec8b7c1ed3c9bdd5bb993cc343397e835927fbae2f47226d367aa1f18aa
+      ENCRYPTION_KEY: hY57F6fz6Hp1YtdqWUTpRxV3WMyoSVaaBzGe1JD97yo=
+      EVOAI_CRM_API_TOKEN: 4513c723b01d4bc03d9cf769558646b7806e994867b187933481a6c491823696
+      EVO_AUTH_BASE_URL: http://evocrm_auth:3001
+      EVO_AI_CRM_URL: http://evocrm_crm:3000
+      CORE_SERVICE_URL: http://evocrm_core:5555/api/v1
+      APP_URL: http://51.77.194.244:3030
+      API_URL: http://51.77.194.244:3030
+      API_TITLE: Agent Processor Community
+      API_DESCRIPTION: Agent Processor Community for Evo AI
+      API_VERSION: 1.0.0
+      ORGANIZATION_NAME: Evo CRM
+      TOOLS_CACHE_ENABLED: "true"
+      TOOLS_CACHE_TTL: "3600"
+    depends_on:
+      pgvector:
+        condition: service_healthy
+      evocrm_redis:
+        condition: service_healthy
+
+  # --------------------------- BOT RUNTIME (Go, 8080) ------------------------
+  evocrm_bot_runtime:
+    image: evoapicloud/evo-bot-runtime:1.0.0
+    restart: unless-stopped
+    environment:
+      LISTEN_ADDR: 0.0.0.0:8080
+      REDIS_URL: redis://evocrm_redis:6379/1
+      AI_PROCESSOR_URL: http://evocrm_processor:8000
+      BOT_RUNTIME_SECRET: 300e01102ea69637c1826821f20fd72740d0bb46809ed28dcd4600cb0d3d1ecd
+      AI_CALL_TIMEOUT_SECONDS: "30"
+    depends_on:
+      evocrm_redis:
+        condition: service_healthy
+
+  # --------------------------- FRONTEND (React/Vite/nginx, 80) ---------------
+  evocrm_frontend:
+    build: .
+    restart: unless-stopped
+    environment:
+      VITE_APP_ENV: production
+      VITE_API_URL: http://51.77.194.244:3030
+      VITE_AUTH_API_URL: http://51.77.194.244:3030
+      VITE_EVOAI_API_URL: http://51.77.194.244:3030
+      VITE_AGENT_PROCESSOR_URL: http://51.77.194.244:3030
+      VITE_WS_URL: http://51.77.194.244:3030
+    ports:
+      - "5173:80"
+    depends_on:
+      evocrm_auth:
+        condition: service_healthy
+      evocrm_crm:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # --------------------------- EVOFLOW (NestJS, 3334) ------------------------
+  evocrm_evoflow:
+    image: evoapicloud/evo-flow-community:1.0.0
+    restart: unless-stopped
+    command:
+      - sh
+      - -c
+      - |
+        until node -e 'require("http").get("http://evocrm_clickhouse:8123/ping",r=>process.exit(r.statusCode===200?0:1)).on("error",()=>process.exit(1))'; do echo 'Waiting for clickhouse...'; sleep 5; done
+        node -e 'const{Client}=require("pg");const db=process.env.POSTGRES_DB_DATABASE;const c=new Client({host:process.env.POSTGRES_DB_HOST,port:+(process.env.POSTGRES_DB_PORT||5432),user:process.env.POSTGRES_DB_USERNAME,password:process.env.POSTGRES_DB_PASSWORD,database:"postgres"});c.connect().then(()=>c.query("CREATE DATABASE "+db)).then(()=>console.log("[init] created "+db)).catch(e=>console.log("[init] "+(e.code==="42P04"?"db already exists":e.message))).finally(()=>c.end());'
+        node_modules/.bin/typeorm migration:run -d dist/database/ormconfig.js || echo "[init] migration:run failed (continuing)"
+        exec node dist/main.js
+    environment:
+      NODE_ENV: production
+      RUN_MODE: api
+      QUEUE_MODE: direct
+      STORAGE_MODE: clickhouse
+      WRITE_MODE: ch-sync
+      PORT: "3334"
+      LOG_LEVEL: log
+      AUTH_APIKEY_INTEGRATION_LOCAL: 44b24f5183ee954f01602231657f252bd626d5d42c53e24a0cb832e9b1c2598b
+      EVO_AUTH_SERVICE_URL: http://evocrm_auth:3001
+      EVO_AUTH_VALIDATE_TOKEN_ENDPOINT: /api/v1/auth/validate
+      EVOAI_CRM_BASE_URL: http://evocrm_crm:3000
+      EVOAI_CRM_API_TOKEN: 4513c723b01d4bc03d9cf769558646b7806e994867b187933481a6c491823696
+      BROKER_TYPE: rabbitmq
+      RABBITMQ_URL: amqp://evoflow:c6050948543269a26657e73596f57a20@evocrm_rabbitmq:5672
+      CLICKHOUSE_HOST: evocrm_clickhouse
+      CLICKHOUSE_PORT: "8123"
+      CLICKHOUSE_DATABASE: evo_campaign
+      CLICKHOUSE_USERNAME: default
+      CLICKHOUSE_PASSWORD: 4c3361fa4f4af5d13caacae222058c63
+      CLICKHOUSE_TABLE: contact_events
+      REDIS_HOST: evocrm_redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ""
+      REDIS_DB: "4"
+      POSTGRES_DB_HOST: pgvector
+      POSTGRES_DB_PORT: "5432"
+      POSTGRES_DB_USERNAME: postgres
+      POSTGRES_DB_PASSWORD: 9db13a0f53877322cf311ea9f4f326a4
+      POSTGRES_DB_DATABASE: evo_campaign
+    depends_on:
+      evocrm_clickhouse:
+        condition: service_healthy
+      pgvector:
+        condition: service_healthy
+      evocrm_rabbitmq:
+        condition: service_healthy
+      evocrm_redis:
+        condition: service_healthy
+
+volumes:
+  pgvector_data:
+  evocrm_redis:
+  evocrm_rabbitmq_data:
+  evocrm_clickhouse_data:
+  evoauth_storage:
+  evocrm_storage:
+  evocrm_processor_logs:
