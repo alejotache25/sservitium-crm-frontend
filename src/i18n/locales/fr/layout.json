@@ -73,8 +73,8 @@
     "collapse": "Réduire la barre latérale",
     "closeSubmenu": "Fermer le sous-menu",
     "footer": {
-      "brand": "Evo CRM",
-      "copyright": "© {{year}} Evolution Foundation. All rights reserved.",
+      "brand": "SSERVITIUM CRM",
+      "copyright": "© {{year}} SSERVITIUM. Todos los derechos reservados.",
       "documentation": "Documentation",
       "support": "J'ai besoin d'assistance"
     }
