@@ -129,6 +129,97 @@ export function validateEIN(ein: string): boolean {
 }
 
 /**
+ * Validates DNI/NIF (Spanish Individual Tax ID)
+ * Format: 8 digits + control letter (e.g. 12345678Z)
+ * @param nif - NIF string (can be formatted or not)
+ * @returns boolean
+ */
+export function validateDNI(nif: string): boolean {
+  const clean = nif.toUpperCase().replace(/[\s.-]/g, '');
+
+  if (!/^\d{8}[A-Z]$/.test(clean)) return false;
+
+  const letters = 'TRWAGMYFPDXBNJZSQVHLCKE';
+  const digits = parseInt(clean.substring(0, 8), 10);
+  return letters[digits % 23] === clean.charAt(8);
+}
+
+/**
+ * Validates NIE (Foreigner Identity Number, Spain)
+ * Format: X/Y/Z + 7 digits + control letter
+ * @param nie - NIE string
+ * @returns boolean
+ */
+export function validateNIE(nie: string): boolean {
+  const clean = nie.toUpperCase().replace(/[\s.-]/g, '');
+
+  if (!/^[XYZ]\d{7}[A-Z]$/.test(clean)) return false;
+
+  const prefixMap: Record<string, string> = { X: '0', Y: '1', Z: '2' };
+  const letters = 'TRWAGMYFPDXBNJZSQVHLCKE';
+  const digits = prefixMap[clean.charAt(0)] + clean.substring(1, 8);
+  return letters[parseInt(digits, 10) % 23] === clean.charAt(8);
+}
+
+/**
+ * Validates CIF (Spanish Company Tax ID)
+ * Format: letter + 7 digits + control char (digit or letter)
+ * @param cif - CIF string
+ * @returns boolean
+ */
+export function validateCIF(cif: string): boolean {
+  const clean = cif.toUpperCase().replace(/[\s-]/g, '');
+
+  if (!/^[ABCDEFGHJKLMNPQRSUVW]\d{7}[0-9A-J]$/.test(clean)) return false;
+
+  const digits = clean.substring(1, 8);
+  let sumA = 0; // odd positions sum
+  let sumB = 0; // even positions digits * 2
+  for (let i = 0; i < 7; i++) {
+    const d = parseInt(digits.charAt(i), 10);
+    if (i % 2 === 0) {
+      const doubled = d * 2;
+      sumA += Math.floor(doubled / 10) + (doubled % 10);
+    } else {
+      sumB += d;
+    }
+  }
+  const control = (10 - ((sumA + sumB) % 10)) % 10;
+  const controlDigit = String(control);
+  const controlLetter = 'JABCDEFGHI'[control];
+
+  const firstLetter = clean.charAt(0);
+  const expected = clean.charAt(8);
+  // Organizations whose control must be a LETTER: K, P, Q, S, N, W, R (public bodies)
+  if ('KPQSNWR'.includes(firstLetter)) return expected === controlLetter;
+  // Organizations whose control must be a DIGIT: A, B, E, H (SAs, SLs, etc.)
+  if ('ABEH'.includes(firstLetter)) return expected === controlDigit;
+  // Both allowed for the rest (J, G...)
+  return expected === controlDigit || expected === controlLetter;
+}
+
+/**
+ * Validates VAT number for any EU country (fallback: alphanumeric length check)
+ * @param vat - VAT string, optionally prefixed with country code (ES, IT, DE, FR, PT...)
+ * @returns boolean
+ */
+export function validateVAT(vat: string): boolean {
+  const clean = vat.toUpperCase().replace(/[\s.-]/g, '');
+
+  // Spanish formats: NIF (8 digits + letter), NIE (X/Y/Z + 7 digits + letter), CIF (letter + 7 digits + control)
+  if (clean.startsWith('ES')) {
+    const body = clean.substring(2);
+    return validateDNI(body) || validateNIE(body) || validateCIF(body);
+  }
+
+  // Generic EU check: country code (2 letters) + 8-12 alphanumeric chars
+  if (/^[A-Z]{2}[A-Z0-9]{8,12}$/.test(clean)) return true;
+
+  // Bare Spanish NIF/CIF/NIE without ES prefix
+  return validateDNI(clean) || validateNIE(clean) || validateCIF(clean);
+}
+
+/**
  * Validates CUIT/CUIL (Argentine Tax ID)
  * @param cuit - CUIT string (can be formatted or not)
  * @returns boolean
@@ -163,6 +254,9 @@ export function validateTaxId(taxId: string, country: string, type: 'person' | '
   if (!taxId) return true; // Empty is valid (handled by required validation)
 
   switch (country) {
+    case 'ES':
+      // Spain: person -> DNI/NIE, company -> CIF (or EU VAT for foreign companies)
+      return type === 'person' ? validateDNI(taxId) || validateNIE(taxId) : validateCIF(taxId) || validateVAT(taxId);
     case 'BR':
       return type === 'person' ? validateCPF(taxId) : validateCNPJ(taxId);
     case 'US':
@@ -174,8 +268,8 @@ export function validateTaxId(taxId: string, country: string, type: 'person' | '
       const cleanRFC = taxId.replace(/[^A-Z0-9]/g, '');
       return type === 'person' ? cleanRFC.length === 13 : cleanRFC.length === 12;
     default:
-      // For countries without specific validation, just check not empty
-      return taxId.length > 0;
+      // EU and other countries: accept VAT (IT..., DE..., FR...) or any non-empty value
+      return validateVAT(taxId) || taxId.length > 0;
   }
 }
 
@@ -207,6 +301,7 @@ export function formatCNPJ(cnpj: string): string {
  */
 export function getTaxIdLabel(country: string, type: 'person' | 'company'): string {
   const labels: Record<string, { person: string; company: string }> = {
+    ES: { person: 'DNI/NIF', company: 'CIF/NIF' },
     BR: { person: 'CPF', company: 'CNPJ' },
     US: { person: 'SSN', company: 'EIN' },
     AR: { person: 'CUIL', company: 'CUIT' },
@@ -214,5 +309,5 @@ export function getTaxIdLabel(country: string, type: 'person' | 'company'): stri
     CA: { person: 'SIN', company: 'BN' },
   };
 
-  return labels[country]?.[type] || (type === 'person' ? 'Tax ID / SSN' : 'Tax ID / EIN');
+  return labels[country]?.[type] || (type === 'person' ? 'NIF / Documento' : 'CIF / VAT');
 }

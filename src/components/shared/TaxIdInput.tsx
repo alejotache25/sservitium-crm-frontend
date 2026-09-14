@@ -22,6 +22,15 @@ const TAX_ID_CONFIG: Record<string, {
   person: { mask?: string; placeholder: string };
   company: { mask?: string; placeholder: string };
 }> = {
+  ES: {
+    person: {
+      mask: '00000000a', // DNI/NIE: 8 digits + letter
+      placeholder: 'NIF (ej: 12345678Z)',
+    },
+    company: {
+      placeholder: 'CIF/NIF/VAT (ej: B66407255)', // free format: ES CIF or EU VAT
+    },
+  },
   BR: {
     person: {
       mask: '000.000.000-00',
@@ -77,6 +86,7 @@ const TAX_ID_CONFIG: Record<string, {
  * TaxIdInput Component
  *
  * International Tax ID input with country-specific masks:
+ * - ES: NIF/DNI (00000000a) / CIF-NIF-VAT (free, ej: B66407255 or IT03225990138)
  * - BR: CPF (000.000.000-00) / CNPJ (00.000.000/0000-00)
  * - US: SSN (000-00-0000) / EIN (00-0000000)
  * - AR: CUIT/CUIL (00-00000000-0)
@@ -98,7 +108,7 @@ export const TaxIdInput: React.FC<TaxIdInputProps> = ({
   type,
   value,
   onChange,
-  country = 'BR',
+  country = 'ES',
   disabled = false,
   error = false,
   placeholder,

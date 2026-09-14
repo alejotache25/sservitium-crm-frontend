@@ -124,10 +124,15 @@ export default function ContactForm({
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [availableLabels, setAvailableLabels] = useState<LabelType[]>([]);
-  const [phoneCountry, setPhoneCountry] = useState<Country>('BR'); // Track phone country
+  const [phoneCountry, setPhoneCountry] = useState<Country>('ES'); // Track phone country
   const [customAttributes, setCustomAttributes] = useState<Record<string, unknown>>({});
 
   const countryOptions = [
+    { value: 'ES', label: t('form.countries.ES'), name: 'Spain' },
+    { value: 'PT', label: t('form.countries.PT'), name: 'Portugal' },
+    { value: 'FR', label: t('form.countries.FR'), name: 'France' },
+    { value: 'IT', label: t('form.countries.IT'), name: 'Italy' },
+    { value: 'DE', label: t('form.countries.DE'), name: 'Germany' },
     { value: 'BR', label: t('form.countries.BR'), name: 'Brazil' },
     { value: 'US', label: t('form.countries.US'), name: 'United States' },
     { value: 'CA', label: t('form.countries.CA'), name: 'Canada' },

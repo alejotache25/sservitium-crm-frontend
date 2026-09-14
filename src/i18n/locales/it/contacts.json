@@ -208,7 +208,7 @@
       },
       "city": {
         "label": "Città",
-        "placeholder": "Roma"
+        "placeholder": "Terrassa (Barcelona)"
       },
       "country": {
         "label": "Paese",
@@ -242,6 +242,11 @@
       }
     },
     "countries": {
+      "ES": "Spagna",
+      "PT": "Portogallo",
+      "FR": "Francia",
+      "IT": "Italia",
+      "DE": "Germania",
       "BR": "Brasile",
       "US": "Stati Uniti",
       "CA": "Canada",
@@ -252,8 +257,8 @@
       "firstNameRequired": "Il nome è obbligatorio",
       "emailInvalid": "Email non valida",
       "phoneInvalid": "Telefono non valido",
-      "taxIdInvalidPerson": "Codice fiscale non valido (massimo 11 cifre)",
-      "taxIdInvalidCompany": "Partita IVA non valida (massimo 14 cifre)",
+      "taxIdInvalidPerson": "DNI/NIF non valido (formato: 12345678Z)",
+      "taxIdInvalidCompany": "CIF/VAT non valido (es: B66407255)",
       "websiteInvalid": "URL non valido. Usa http:// o https://"
     },
     "actions": {

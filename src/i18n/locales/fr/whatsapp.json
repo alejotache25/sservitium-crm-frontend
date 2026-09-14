@@ -202,7 +202,7 @@
       "phoneNumber": {
         "label": "Numéro WhatsApp",
         "placeholder": "+5511999999999",
-        "helpText": "Incluez le code du pays (ex : +55 pour le Brésil)"
+        "helpText": "Incluez le code du pays (ex : +34 pour l'Espagne)"
       },
       "apiToken": {
         "label": "Token API",

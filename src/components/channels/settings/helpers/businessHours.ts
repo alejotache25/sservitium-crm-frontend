@@ -170,23 +170,20 @@ export const calculateTotalHours = (timeSlot: TimeSlot): number => {
   }
 };
 
-// Timezone data (simplified for Brazil-focused app)
+// Timezone data (Spain-first for European operations)
 export const getTimeZoneOptions = (): TimeZone[] => [
-  { label: i18n.t('channels:settings.businessHours.timezones.brasilia'), value: 'America/Sao_Paulo' },
-  { label: i18n.t('channels:settings.businessHours.timezones.acre'), value: 'America/Rio_Branco' },
-  { label: i18n.t('channels:settings.businessHours.timezones.manaus'), value: 'America/Manaus' },
-  { label: i18n.t('channels:settings.businessHours.timezones.fernandoDeNoronha'), value: 'America/Noronha' },
+  { label: i18n.t('channels:settings.businessHours.timezones.madrid'), value: 'Europe/Madrid' },
   { label: i18n.t('channels:settings.businessHours.timezones.utc'), value: 'UTC' },
+  { label: i18n.t('channels:settings.businessHours.timezones.london'), value: 'Europe/London' },
+  { label: i18n.t('channels:settings.businessHours.timezones.paris'), value: 'Europe/Paris' },
   { label: i18n.t('channels:settings.businessHours.timezones.easternTime'), value: 'America/New_York' },
   { label: i18n.t('channels:settings.businessHours.timezones.centralTime'), value: 'America/Chicago' },
   { label: i18n.t('channels:settings.businessHours.timezones.mountainTime'), value: 'America/Denver' },
   { label: i18n.t('channels:settings.businessHours.timezones.pacificTime'), value: 'America/Los_Angeles' },
-  { label: i18n.t('channels:settings.businessHours.timezones.london'), value: 'Europe/London' },
-  { label: i18n.t('channels:settings.businessHours.timezones.paris'), value: 'Europe/Paris' },
   { label: i18n.t('channels:settings.businessHours.timezones.tokyo'), value: 'Asia/Tokyo' },
 ];
 
 export const getDefaultTimezone = (): TimeZone => ({
-  label: i18n.t('channels:settings.businessHours.timezones.brasilia'),
-  value: 'America/Sao_Paulo',
+  label: i18n.t('channels:settings.businessHours.timezones.madrid'),
+  value: 'Europe/Madrid',
 });

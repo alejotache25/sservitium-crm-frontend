@@ -49,7 +49,7 @@ export const EvolutionForm = ({ form, onFormChange, hasEvolutionConfig }: Evolut
           value={getStr('phone_number')}
           onChange={value => onFormChange('phone_number', value)}
           placeholder={t('twilioForm.fields.phoneNumber.placeholder')}
-          defaultCountry="BR"
+          defaultCountry="ES"
         />
       </div>
 

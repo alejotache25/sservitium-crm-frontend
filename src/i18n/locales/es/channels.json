@@ -177,7 +177,7 @@
       },
       "notificame": {
         "name": "Notificame",
-        "description": "Proveedor WhatsApp brasileño"
+        "description": "Proveedor WhatsApp (Brasil) — opcional"
       },
       "zapi": {
         "name": "Z-API",
@@ -460,6 +460,7 @@
         "saturday": "Sábado"
       },
       "timezones": {
+        "madrid": "Madrid (CET)",
         "brasilia": "Brasilia (GMT-3)",
         "acre": "Acre (GMT-5)",
         "manaus": "Manaus (GMT-4)",

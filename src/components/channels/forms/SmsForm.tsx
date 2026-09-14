@@ -102,7 +102,7 @@ export const SmsForm = ({ selectedProvider, form, onFormChange }: SmsFormProps) 
                     value={getStr('phone_number')}
                     onChange={value => onFormChange('phone_number', value)}
                     placeholder={t('fields.phoneNumber.placeholder')}
-                    defaultCountry="BR"
+                    defaultCountry="ES"
                   />
                   <p className="text-xs text-muted-foreground mt-1">{t('fields.twilio.phoneNumber.helpText')}</p>
                 </div>
@@ -126,7 +126,7 @@ export const SmsForm = ({ selectedProvider, form, onFormChange }: SmsFormProps) 
               value={getStr('phone_number')}
               onChange={value => onFormChange('phone_number', value)}
               placeholder={t('fields.bandwidth.phoneNumber.placeholder')}
-              defaultCountry="BR"
+              defaultCountry="ES"
             />
             <p className="text-xs text-muted-foreground mt-1">{t('fields.bandwidth.phoneNumber.helpText')}</p>
           </div>

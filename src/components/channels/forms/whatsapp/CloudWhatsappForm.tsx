@@ -386,7 +386,7 @@ export const CloudWhatsappForm = ({ form, onFormChange, canFB, onCancel }: Cloud
           value={getStr('phone_number')}
           onChange={value => onFormChange('phone_number', value)}
           placeholder={t('cloudWhatsappForm.fields.phoneNumber.placeholder')}
-          defaultCountry="BR"
+          defaultCountry="ES"
           disabled={isAutoFilled}
         />
       </div>

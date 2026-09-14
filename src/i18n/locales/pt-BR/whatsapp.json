@@ -71,7 +71,7 @@
       "phoneNumber": {
         "label": "Número de Telefone",
         "placeholder": "+5511999999999",
-        "helpText": "Inclua o código do país (ex: +55 para Brasil)"
+        "helpText": "Inclua o código do país (ex: +34 para Brasil)"
       },
       "apiKey": {
         "label": "Token de Acesso",
@@ -202,7 +202,7 @@
       "phoneNumber": {
         "label": "Número do WhatsApp",
         "placeholder": "+5511999999999",
-        "helpText": "Inclua o código do país (ex: +55 para Brasil)"
+        "helpText": "Inclua o código do país (ex: +34 para Brasil)"
       },
       "apiToken": {
         "label": "Token API",
@@ -259,7 +259,7 @@
       "phoneNumber": {
         "label": "Número do WhatsApp",
         "placeholder": "+5511999999999",
-        "helpText": "Inclua o código do país (ex: +55 para Brasil)"
+        "helpText": "Inclua o código do país (ex: +34 para Brasil)"
       },
       "instanceId": {
         "label": "Instance ID",

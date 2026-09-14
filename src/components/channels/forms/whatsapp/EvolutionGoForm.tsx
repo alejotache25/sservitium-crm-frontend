@@ -49,7 +49,7 @@ export const EvolutionGoForm = ({ form, onFormChange, hasEvolutionGoConfig }: Ev
           value={getStr('phone_number')}
           onChange={value => onFormChange('phone_number', value)}
           placeholder={t('evolutionGoForm.fields.phoneNumber.placeholder')}
-          defaultCountry="BR"
+          defaultCountry="ES"
         />
       </div>
 

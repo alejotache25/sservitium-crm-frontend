@@ -476,6 +476,7 @@
         "saturday": "Sábado"
       },
       "timezones": {
+        "madrid": "Madri (CET)",
         "brasilia": "Brasília (GMT-3)",
         "acre": "Acre (GMT-5)",
         "manaus": "Manaus (GMT-4)",

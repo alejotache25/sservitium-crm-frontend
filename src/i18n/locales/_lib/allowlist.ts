@@ -110,6 +110,7 @@ export const PER_FILE_ALLOWED: Record<string, Set<string>> = {
   'contacts.json': new Set([
     'Twilio SMS', '+{{count}} pipeline', '+{{count}} pipelines',
     '{{days}}d {{hours}}h', '{{hours}}h {{minutes}}m', '{{minutes}}m {{seconds}}s',
+    'Portugal', 'Terrassa (Barcelona)',
   ]),
   'customMcpServers.json': new Set([
     'Timeout: {{timeout}}s', 'api, search, database',

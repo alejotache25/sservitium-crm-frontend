@@ -26,14 +26,14 @@ interface PhoneInputProps {
  * <PhoneInput
  *   value={phone}
  *   onChange={setPhone}
- *   defaultCountry="BR"
+ *   defaultCountry="ES"
  *   error={!!errors.phone}
  * />
  */
 export const PhoneInput: React.FC<PhoneInputProps> = ({
   value,
   onChange,
-  defaultCountry = 'BR',
+  defaultCountry = 'ES',
   disabled = false,
   error = false,
   placeholder,

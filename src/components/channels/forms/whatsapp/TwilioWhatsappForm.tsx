@@ -87,7 +87,7 @@ export const TwilioWhatsappForm = ({ form, onFormChange }: TwilioWhatsappFormPro
             value={getStr('phone_number')}
             onChange={value => onFormChange('phone_number', value)}
             placeholder={t('twilioForm.fields.phoneNumber.placeholder')}
-            defaultCountry="BR"
+            defaultCountry="ES"
           />
         </div>
       )}

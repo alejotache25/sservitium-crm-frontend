@@ -25,7 +25,7 @@ export const ZapiForm = ({ form, onFormChange }: ZapiFormProps) => {
           value={getStr('phone_number')}
           onChange={value => onFormChange('phone_number', value)}
           placeholder={t('zapiForm.fields.phoneNumber.placeholder')}
-          defaultCountry="BR"
+          defaultCountry="ES"
         />
       </div>
 

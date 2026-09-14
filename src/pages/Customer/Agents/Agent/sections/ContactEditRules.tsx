@@ -28,7 +28,7 @@ const CONTACT_FIELDS = [
   { id: 'country_code', label: 'País', category: 'basic' },
   { id: 'website', label: 'Website', category: 'basic' },
   { id: 'industry', label: 'Indústria', category: 'basic' },
-  { id: 'tax_id', label: 'CPF/CNPJ', category: 'basic' },
+  { id: 'tax_id', label: 'NIF/CIF', category: 'basic' },
   { id: 'company_name', label: 'Nome da Empresa', category: 'additional' },
   { id: 'city', label: 'Cidade', category: 'additional' },
   { id: 'description', label: 'Descrição', category: 'additional' },

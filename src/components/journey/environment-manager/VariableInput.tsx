@@ -189,7 +189,7 @@ const VariableInput = forwardRef<HTMLInputElement, VariableInputProps>(
               }
             }}
             placeholder={props.placeholder}
-            defaultCountry="BR"
+            defaultCountry="ES"
             disabled={props.disabled}
             className={cn(className)}
           />

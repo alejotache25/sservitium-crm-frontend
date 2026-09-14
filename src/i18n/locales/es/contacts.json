@@ -208,7 +208,7 @@
       },
       "city": {
         "label": "Ciudad",
-        "placeholder": "São Paulo"
+        "placeholder": "Terrassa (Barcelona)"
       },
       "country": {
         "label": "País",
@@ -242,6 +242,11 @@
       }
     },
     "countries": {
+      "ES": "España",
+      "PT": "Portugal",
+      "FR": "Francia",
+      "IT": "Italia",
+      "DE": "Alemania",
       "BR": "Brasil",
       "US": "Estados Unidos",
       "CA": "Canadá",
@@ -252,8 +257,8 @@
       "firstNameRequired": "El primer nombre es obligatorio",
       "emailInvalid": "Email inválido",
       "phoneInvalid": "Teléfono inválido",
-      "taxIdInvalidPerson": "DNI/NIF inválido (máximo 11 dígitos)",
-      "taxIdInvalidCompany": "CIF inválido (máximo 14 dígitos)",
+      "taxIdInvalidPerson": "DNI/NIF inválido (formato: 12345678Z)",
+      "taxIdInvalidCompany": "CIF/VAT inválido (ej: B66407255)",
       "websiteInvalid": "URL inválida. Use http:// o https://"
     },
     "actions": {
