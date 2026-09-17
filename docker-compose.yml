@@ -91,6 +91,7 @@ services:
       CORE_UPSTREAM: evocrm_core:5555
       PROCESSOR_UPSTREAM: evocrm_processor:8000
       BOT_RUNTIME_UPSTREAM: evocrm_bot_runtime:8080
+      FLOW_UPSTREAM: evocrm_evoflow:3334
     ports:
       - "3030:3030"
 
