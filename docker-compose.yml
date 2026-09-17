@@ -316,8 +316,11 @@ services:
       HOST: 0.0.0.0
       PORT: "8000"
       DEBUG: "false"
-      SECRET_KEY_BASE: b58aa8cc00804fb1be7eab421318d06196b4b0192a6fbdb28e6cadb521f19ed427333ec8b7c1ed3c9bdd5bb993cc343397e835927fbae2f47226d367aa1f18aa
-      ENCRYPTION_KEY: hY57F6fz6Hp1YtdqWUTpRxV3WMyoSVaaBzGe1JD97yo=
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      # LiteLLM: redirigir prefijo openai/ a Ollama Cloud (credencial custom)
+      OPENAI_API_BASE: https://ollama.com/v1
+      OPENAI_BASE_URL: https://ollama.com/v1
       EVOAI_CRM_API_TOKEN: 4513c723b01d4bc03d9cf769558646b7806e994867b187933481a6c491823696
       EVO_AUTH_BASE_URL: http://evocrm_auth:3001
       EVO_AI_CRM_URL: http://evocrm_crm:3000
