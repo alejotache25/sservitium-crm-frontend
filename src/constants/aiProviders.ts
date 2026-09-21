@@ -1,5 +1,12 @@
 export const CUSTOM_OPENAI_PROVIDER = 'custom_openai_compatible';
 
+// Ollama Cloud speaks the OpenAI protocol, but the backend has no native
+// provider entry for it. This is a frontend shortcut: picking "Ollama Cloud"
+// saves a custom_openai_compatible credential pointing at ollama.com/v1, so
+// AI features keep working and the backend contract stays untouched.
+export const OLLAMA_CLOUD_SHORTCUT = 'ollama_cloud_shortcut';
+export const OLLAMA_CLOUD_BASE_URL = 'https://ollama.com/v1';
+
 export interface AiProvider {
   value: string;
   label: string;
@@ -20,8 +27,19 @@ export const AI_PROVIDERS: AiProvider[] = [
   { value: 'perplexity', label: 'Perplexity' },
   { value: 'bedrock', label: 'AWS Bedrock' },
   { value: 'vertex_ai', label: 'Google Vertex AI' },
+  { value: OLLAMA_CLOUD_SHORTCUT, label: 'Ollama Cloud' },
   { value: CUSTOM_OPENAI_PROVIDER, label: 'Custom (OpenAI-compatible)' },
 ];
+
+/** True when the draft provider is the Ollama Cloud shortcut. */
+export function isOllamaCloudShortcut(provider: string): boolean {
+  return provider === OLLAMA_CLOUD_SHORTCUT;
+}
+
+/** Maps a UI provider choice to what the backend stores. */
+export function toBackendProvider(provider: string): string {
+  return provider === OLLAMA_CLOUD_SHORTCUT ? CUSTOM_OPENAI_PROVIDER : provider;
+}
 
 // Providers speaking the OpenAI wire protocol serve every AI feature. The rest
 // are only reachable through AI Agents. Mirrors IsOpenAICompatible in

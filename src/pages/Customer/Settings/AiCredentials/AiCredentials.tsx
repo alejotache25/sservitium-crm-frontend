@@ -24,9 +24,13 @@ import EmptyState from '@/components/base/EmptyState';
 import {
   AI_PROVIDERS,
   CUSTOM_OPENAI_PROVIDER,
+  OLLAMA_CLOUD_BASE_URL,
+  OLLAMA_CLOUD_SHORTCUT,
+  isOllamaCloudShortcut,
   isOpenAICompatible,
   maskKey,
   resolveCredentialState,
+  toBackendProvider,
 } from '@/constants/aiProviders';
 import {
   createApiKey,
@@ -209,7 +213,10 @@ export default function AiCredentials() {
   }, [permissionsReady]);
 
   const providerLabel = useCallback(
-    (value: string) => AI_PROVIDERS.find(provider => provider.value === value)?.label ?? value,
+    (value: string) =>
+      AI_PROVIDERS.find(provider => provider.value === value)?.label
+      // Credentials saved through the shortcut render as Ollama Cloud too.
+      ?? (value === CUSTOM_OPENAI_PROVIDER ? 'Custom (OpenAI-compatible)' : value),
     [],
   );
 
@@ -220,8 +227,18 @@ export default function AiCredentials() {
     [],
   );
 
+  // A custom credential pointing at ollama.com IS Ollama Cloud for the user,
+  // no matter how it was created (API, shortcut, manual custom).
+  const displayProviderLabel = useCallback(
+    (credential: ApiKey) =>
+      credential.provider === CUSTOM_OPENAI_PROVIDER && credential.base_url?.includes('ollama.com')
+        ? 'Ollama Cloud'
+        : providerLabel(credential.provider),
+    [providerLabel],
+  );
+
   const draftIsIncompatible = useMemo(
-    () => Boolean(draft.provider) && !isOpenAICompatible(draft.provider),
+    () => Boolean(draft.provider) && !isOpenAICompatible(toBackendProvider(draft.provider)),
     [draft.provider],
   );
 
@@ -231,10 +248,12 @@ export default function AiCredentials() {
   };
 
   const openEditForm = (credential: ApiKey) => {
+    const isOllama = credential.provider === CUSTOM_OPENAI_PROVIDER
+      && credential.base_url?.includes('ollama.com');
     setDraft({
       id: credential.id,
       name: credential.name,
-      provider: credential.provider,
+      provider: isOllama ? OLLAMA_CLOUD_SHORTCUT : credential.provider,
       key_value: '',
       base_url: credential.base_url ?? '',
       scope: credential.scope ?? 'account',
@@ -262,11 +281,18 @@ export default function AiCredentials() {
     try {
       setSaving(true);
 
+      // The Ollama Cloud option is a UI shortcut: the backend always receives
+      // the real provider plus the base_url that makes it work.
+      const provider = toBackendProvider(draft.provider);
+      const baseUrl = isOllamaCloudShortcut(draft.provider)
+        ? OLLAMA_CLOUD_BASE_URL
+        : draft.base_url;
+
       if (draft.id) {
         const payload: ApiKeyUpdate = {
           name: draft.name,
-          provider: draft.provider,
-          base_url: draft.base_url || undefined,
+          provider,
+          base_url: baseUrl || undefined,
           scope: draft.scope,
         };
         // An empty field keeps the stored key: never send a blank key_value.
@@ -279,9 +305,9 @@ export default function AiCredentials() {
       } else {
         const payload: ApiKeyCreate = {
           name: draft.name,
-          provider: draft.provider,
+          provider,
           key_value: draft.key_value,
-          base_url: draft.base_url || undefined,
+          base_url: baseUrl || undefined,
           scope: draft.scope,
         };
 
@@ -412,7 +438,7 @@ export default function AiCredentials() {
               <tr key={credential.id} className="border-t">
                 <td className="p-3 font-medium">{credential.name}</td>
                 <td className="p-3">
-                  <Badge variant="outline">{providerLabel(credential.provider)}</Badge>
+                  <Badge variant="outline">{displayProviderLabel(credential)}</Badge>
                 </td>
                 <td className="p-3 font-mono">{maskKey(credential.key_hint)}</td>
                 <td className="p-3">
@@ -597,7 +623,13 @@ export default function AiCredentials() {
                   setDraft({
                     ...draft,
                     provider: value,
-                    ...(value !== CUSTOM_OPENAI_PROVIDER ? { base_url: '' } : {}),
+                    // Ollama Cloud carries a fixed base_url; plain Custom asks
+                    // for one and everything else ignores the field.
+                    ...(isOllamaCloudShortcut(value)
+                      ? { base_url: OLLAMA_CLOUD_BASE_URL, name: draft.name || 'Ollama Cloud' }
+                      : value !== CUSTOM_OPENAI_PROVIDER
+                        ? { base_url: '' }
+                        : {}),
                   })
                 }
               >
@@ -614,7 +646,7 @@ export default function AiCredentials() {
               </Select>
             </div>
 
-            {draft.provider === CUSTOM_OPENAI_PROVIDER && (
+            {draft.provider === CUSTOM_OPENAI_PROVIDER && !isOllamaCloudShortcut(draft.provider) && (
               <div className="grid gap-2">
                 <Label htmlFor="credential-base-url">{t('form.labels.baseUrl')}</Label>
                 <Input
