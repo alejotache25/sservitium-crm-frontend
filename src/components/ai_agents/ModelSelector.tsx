@@ -182,11 +182,12 @@ const ModelSelector = ({
 
   const customProviderSelected = selectedApiKey?.provider === CUSTOM_OPENAI_PROVIDER;
 
-  // Ollama Cloud keys are custom OpenAI-compatible: the backend cannot list
-  // their models dynamically, but we can detect them by name and offer the
-  // curated OLLAMA_CLOUD_MODELS list below.
+  // Every custom OpenAI-compatible key in this deployment routes to Ollama
+  // Cloud through the processor's OPENAI_API_BASE, so the curated list below
+  // applies to all of them. The backend cannot list custom models dynamically
+  // (base_url is not returned, key is encrypted), hence the fixed list.
   const isOllamaKey = useMemo(() => {
-    return (selectedApiKey?.name || '').toLowerCase().includes('ollama');
+    return selectedApiKey?.provider === CUSTOM_OPENAI_PROVIDER;
   }, [selectedApiKey]);
 
   // Dynamic model list fetched from the provider via the backend. Populated
