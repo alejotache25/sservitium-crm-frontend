@@ -26,27 +26,30 @@ const CUSTOM_OPENAI_PROVIDER = 'custom_openai_compatible';
 // key encrypted), so we ship a curated list instead. Sorted from cheapest to
 // most expensive by blended (input+output)/2 cost. Prices per 1M tokens
 // (off-peak), shown as entry/output.
+// NOTE: values carry the `openai/` prefix because the processor (litellm)
+// routes them to Ollama Cloud through the OpenAI-compatible path
+// (OPENAI_API_BASE). This is the exact format already proven in production.
 const OLLAMA_CLOUD_MODELS: ApiKeyModelInfo[] = [
-  { value: 'nemotron-3-nano:30b', label: 'Nemotron 3 Nano 30B · $0.06/$0.24', provider: 'ollama' },
-  { value: 'gpt-oss:20b', label: 'GPT-OSS 20B · $0.07/$0.30', provider: 'ollama' },
-  { value: 'gemma4:31b', label: 'Gemma 4 31B · $0.14/$0.40', provider: 'ollama' },
-  { value: 'nemotron-3-super', label: 'Nemotron 3 Super · $0.02/$0.60', provider: 'ollama' },
-  { value: 'glm-5.3-flash', label: 'GLM 5.3 Flash · $0.15/$0.50', provider: 'ollama' },
-  { value: 'deepseek-v4.1-flash', label: 'DeepSeek v4.1 Flash · $0.15/$0.60', provider: 'ollama' },
-  { value: 'gpt-oss:120b', label: 'GPT-OSS 120B · $0.15/$0.60', provider: 'ollama' },
-  { value: 'deepseek-v4-flash:0731', label: 'DeepSeek v4 Flash 0731 · $0.22/$0.66', provider: 'ollama' },
-  { value: 'minimax-m2.7', label: 'MiniMax M2.7 · $0.30/$1.20', provider: 'ollama' },
-  { value: 'mistral-large-3:675b', label: 'Mistral Large 3 · $0.50/$1.50', provider: 'ollama' },
-  { value: 'deepseek-v4-pro:0813', label: 'DeepSeek v4 Pro 0813 · $0.66/$1.98', provider: 'ollama' },
-  { value: 'minimax-m3', label: 'MiniMax M3 · $0.60/$2.40', provider: 'ollama' },
-  { value: 'nemotron-3-ultra', label: 'Nemotron 3 Ultra · $0.10/$3.00', provider: 'ollama' },
-  { value: 'qwen3.5:397b', label: 'Qwen 3.5 397B · $0.60/$3.60', provider: 'ollama' },
-  { value: 'glm-5.1', label: 'GLM 5.1 · $1.00/$3.20', provider: 'ollama' },
-  { value: 'kimi-k2.6', label: 'Kimi K2.6 · $0.95/$4.00', provider: 'ollama' },
-  { value: 'kimi-k2.7-code', label: 'Kimi K2.7 Code · $0.95/$4.00', provider: 'ollama' },
-  { value: 'glm-5.2', label: 'GLM 5.2 · $1.40/$4.40', provider: 'ollama' },
-  { value: 'glm-5.3', label: 'GLM 5.3 · $1.40/$4.40', provider: 'ollama' },
-  { value: 'kimi-k3', label: 'Kimi K3 · $3.00/$15.00', provider: 'ollama' },
+  { value: 'openai/nemotron-3-nano:30b', label: 'Nemotron 3 Nano 30B · $0.06/$0.24', provider: 'ollama' },
+  { value: 'openai/gpt-oss:20b', label: 'GPT-OSS 20B · $0.07/$0.30', provider: 'ollama' },
+  { value: 'openai/gemma4:31b', label: 'Gemma 4 31B · $0.14/$0.40', provider: 'ollama' },
+  { value: 'openai/nemotron-3-super', label: 'Nemotron 3 Super · $0.02/$0.60', provider: 'ollama' },
+  { value: 'openai/glm-5.3-flash', label: 'GLM 5.3 Flash · $0.15/$0.50', provider: 'ollama' },
+  { value: 'openai/deepseek-v4.1-flash', label: 'DeepSeek v4.1 Flash · $0.15/$0.60', provider: 'ollama' },
+  { value: 'openai/gpt-oss:120b', label: 'GPT-OSS 120B · $0.15/$0.60', provider: 'ollama' },
+  { value: 'openai/deepseek-v4-flash:0731', label: 'DeepSeek v4 Flash 0731 · $0.22/$0.66', provider: 'ollama' },
+  { value: 'openai/minimax-m2.7', label: 'MiniMax M2.7 · $0.30/$1.20', provider: 'ollama' },
+  { value: 'openai/mistral-large-3:675b', label: 'Mistral Large 3 · $0.50/$1.50', provider: 'ollama' },
+  { value: 'openai/deepseek-v4-pro:0813', label: 'DeepSeek v4 Pro 0813 · $0.66/$1.98', provider: 'ollama' },
+  { value: 'openai/minimax-m3', label: 'MiniMax M3 · $0.60/$2.40', provider: 'ollama' },
+  { value: 'openai/nemotron-3-ultra', label: 'Nemotron 3 Ultra · $0.10/$3.00', provider: 'ollama' },
+  { value: 'openai/qwen3.5:397b', label: 'Qwen 3.5 397B · $0.60/$3.60', provider: 'ollama' },
+  { value: 'openai/glm-5.1', label: 'GLM 5.1 · $1.00/$3.20', provider: 'ollama' },
+  { value: 'openai/kimi-k2.6', label: 'Kimi K2.6 · $0.95/$4.00', provider: 'ollama' },
+  { value: 'openai/kimi-k2.7-code', label: 'Kimi K2.7 Code · $0.95/$4.00', provider: 'ollama' },
+  { value: 'openai/glm-5.2', label: 'GLM 5.2 · $1.40/$4.40', provider: 'ollama' },
+  { value: 'openai/glm-5.3', label: 'GLM 5.3 · $1.40/$4.40', provider: 'ollama' },
+  { value: 'openai/kimi-k3', label: 'Kimi K3 · $3.00/$15.00', provider: 'ollama' },
 ];
 
 export const availableModels = [
