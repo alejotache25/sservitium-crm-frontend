@@ -21,6 +21,34 @@ import { agentsService } from '@/services/agents/agentService';
 const CUSTOM_MODEL_OPTION = '__custom_model__';
 const CUSTOM_OPENAI_PROVIDER = 'custom_openai_compatible';
 
+// Ollama Cloud fixed model list (ollama.com, 2026-09). The backend cannot fetch
+// models dynamically for custom_openai_compatible keys (base_url not stored,
+// key encrypted), so we ship a curated list instead. Sorted from cheapest to
+// most expensive by blended (input+output)/2 cost. Prices per 1M tokens
+// (off-peak), shown as entry/output.
+const OLLAMA_CLOUD_MODELS: ApiKeyModelInfo[] = [
+  { value: 'nemotron-3-nano:30b', label: 'Nemotron 3 Nano 30B · $0.06/$0.24', provider: 'ollama' },
+  { value: 'gpt-oss:20b', label: 'GPT-OSS 20B · $0.07/$0.30', provider: 'ollama' },
+  { value: 'gemma4:31b', label: 'Gemma 4 31B · $0.14/$0.40', provider: 'ollama' },
+  { value: 'nemotron-3-super', label: 'Nemotron 3 Super · $0.02/$0.60', provider: 'ollama' },
+  { value: 'glm-5.3-flash', label: 'GLM 5.3 Flash · $0.15/$0.50', provider: 'ollama' },
+  { value: 'deepseek-v4.1-flash', label: 'DeepSeek v4.1 Flash · $0.15/$0.60', provider: 'ollama' },
+  { value: 'gpt-oss:120b', label: 'GPT-OSS 120B · $0.15/$0.60', provider: 'ollama' },
+  { value: 'deepseek-v4-flash:0731', label: 'DeepSeek v4 Flash 0731 · $0.22/$0.66', provider: 'ollama' },
+  { value: 'minimax-m2.7', label: 'MiniMax M2.7 · $0.30/$1.20', provider: 'ollama' },
+  { value: 'mistral-large-3:675b', label: 'Mistral Large 3 · $0.50/$1.50', provider: 'ollama' },
+  { value: 'deepseek-v4-pro:0813', label: 'DeepSeek v4 Pro 0813 · $0.66/$1.98', provider: 'ollama' },
+  { value: 'minimax-m3', label: 'MiniMax M3 · $0.60/$2.40', provider: 'ollama' },
+  { value: 'nemotron-3-ultra', label: 'Nemotron 3 Ultra · $0.10/$3.00', provider: 'ollama' },
+  { value: 'qwen3.5:397b', label: 'Qwen 3.5 397B · $0.60/$3.60', provider: 'ollama' },
+  { value: 'glm-5.1', label: 'GLM 5.1 · $1.00/$3.20', provider: 'ollama' },
+  { value: 'kimi-k2.6', label: 'Kimi K2.6 · $0.95/$4.00', provider: 'ollama' },
+  { value: 'kimi-k2.7-code', label: 'Kimi K2.7 Code · $0.95/$4.00', provider: 'ollama' },
+  { value: 'glm-5.2', label: 'GLM 5.2 · $1.40/$4.40', provider: 'ollama' },
+  { value: 'glm-5.3', label: 'GLM 5.3 · $1.40/$4.40', provider: 'ollama' },
+  { value: 'kimi-k3', label: 'Kimi K3 · $3.00/$15.00', provider: 'ollama' },
+];
+
 export const availableModels = [
   { value: 'openai/gpt-4.1', label: 'GPT-4.1', provider: 'openai' },
   { value: 'openai/gpt-4.1-nano', label: 'GPT-4.1 Nano', provider: 'openai' },
@@ -151,6 +179,13 @@ const ModelSelector = ({
 
   const customProviderSelected = selectedApiKey?.provider === CUSTOM_OPENAI_PROVIDER;
 
+  // Ollama Cloud keys are custom OpenAI-compatible: the backend cannot list
+  // their models dynamically, but we can detect them by name and offer the
+  // curated OLLAMA_CLOUD_MODELS list below.
+  const isOllamaKey = useMemo(() => {
+    return (selectedApiKey?.name || '').toLowerCase().includes('ollama');
+  }, [selectedApiKey]);
+
   // Dynamic model list fetched from the provider via the backend. Populated
   // when the user picks an API key for a provider the backend supports. Falls
   // back to the hardcoded `availableModels` below if this is null or empty.
@@ -160,6 +195,7 @@ const ModelSelector = ({
   useEffect(() => {
     if (!apiKeyId || customProviderSelected) {
       setDynamicModels(null);
+      setIsLoadingModels(false);
       return;
     }
 
@@ -186,6 +222,9 @@ const ModelSelector = ({
   }, [apiKeyId, customProviderSelected]);
 
   const filteredModels = useMemo(() => {
+    if (isOllamaKey) {
+      return OLLAMA_CLOUD_MODELS;
+    }
     if (customProviderSelected) {
       return [];
     }
@@ -196,7 +235,7 @@ const ModelSelector = ({
       return availableModels;
     }
     return availableModels.filter(model => model.provider === selectedApiKey.provider);
-  }, [selectedApiKey, customProviderSelected, dynamicModels]);
+  }, [selectedApiKey, customProviderSelected, isOllamaKey, dynamicModels]);
 
   const selectedModel = useMemo(() => {
     return filteredModels.find(model => model.value === value)
@@ -208,13 +247,14 @@ const ModelSelector = ({
   }, [value, selectedModel]);
 
   useEffect(() => {
-    if (customProviderSelected) {
+    if (customProviderSelected && !isOllamaKey) {
       setIsCustomMode(true);
     }
-  }, [customProviderSelected]);
+  }, [customProviderSelected, isOllamaKey]);
 
   const customModelError = isCustomMode && value && !value.includes('/')
     && !customProviderSelected
+    && !isOllamaKey
     ? 'Use provider/model format.'
     : undefined;
 
@@ -259,7 +299,7 @@ const ModelSelector = ({
         </div>
       ) : (
         <>
-          {!customProviderSelected && (
+          {!customProviderSelected || isOllamaKey ? (
             <Popover open={open} onOpenChange={setOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -314,9 +354,9 @@ const ModelSelector = ({
                 </Command>
               </PopoverContent>
             </Popover>
-          )}
+          ) : null}
 
-          {(isCustomMode || customProviderSelected) && (
+          {(isCustomMode || (customProviderSelected && !isOllamaKey)) && (
             <Input
               value={value}
               onChange={e => onChange(e.target.value)}
